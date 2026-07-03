@@ -15,26 +15,47 @@ const container = document.getElementById("products");
 // Track expired products
 let expiredProducts = {};
 
+// Upper bound for stock/expired quantities — guards against
+// fat-finger typos (e.g. an extra zero turning 50 into 5000).
+const MAX_QUANTITY = 10000;
+
 // ===============================
 // Integer-Only Input Sanitizer
 // ===============================
 // Strips anything that isn't a digit as the dealer types/pastes,
-// so values like "0.5" or "-3" can never be entered in the first place.
+// so values like "0.5" or "-3" can never be entered in the first place,
+// clamps the result to MAX_QUANTITY, and shows a warning message
+// next to the field while the entered value is over the limit.
 function sanitizeInteger(input) {
 
-    const cleaned = input.value.replace(/[^0-9]/g, "");
+    let cleaned = input.value.replace(/[^0-9]/g, "");
+
+    const numericValue = cleaned === "" ? 0 : parseInt(cleaned, 10);
+    const isOverMax = numericValue > MAX_QUANTITY;
+
+    if (isOverMax) {
+        cleaned = String(MAX_QUANTITY);
+    }
 
     input.value = cleaned;
 
+    const warningEl = document.getElementById(input.dataset.warningId);
+
+    if (warningEl) {
+        warningEl.style.display = isOverMax ? "inline" : "none";
+    }
+
 }
 
-// Converts a field's value to a safe non-negative integer.
-// Used as the final safety net before saving to Firestore.
+// Converts a field's value to a safe non-negative integer,
+// clamped to MAX_QUANTITY. Used as the final safety net before
+// saving to Firestore.
 function toSafeInt(value) {
 
     let num = parseInt(value, 10);
 
     if (isNaN(num) || num < 0) num = 0;
+    if (num > MAX_QUANTITY) num = MAX_QUANTITY;
 
     return num;
 
@@ -117,15 +138,23 @@ async function loadProducts() {
                     id="stock${index}"
                     type="number"
                     min="0"
+                    max="${MAX_QUANTITY}"
                     step="1"
                     inputmode="numeric"
                     pattern="[0-9]*"
+                    data-warning-id="stockLimit${index}"
                     oninput="sanitizeInteger(this)"
                     value="${stockValue}">
 
                 <button onclick="changeStock(${index},1)">+</button>
 
             </div>
+
+            <small
+                id="stockLimit${index}"
+                style="color:#c0392b;display:none;">
+                Max allowed is ${MAX_QUANTITY}
+            </small>
 
             <br>
 
@@ -139,15 +168,23 @@ async function loadProducts() {
                     id="expired${index}"
                     type="number"
                     min="0"
+                    max="${MAX_QUANTITY}"
                     step="1"
                     inputmode="numeric"
                     pattern="[0-9]*"
+                    data-warning-id="expiredLimit${index}"
                     oninput="sanitizeInteger(this)"
                     value="${expiredValue}">
 
                 <button onclick="changeExpired(${index},1)">+</button>
 
             </div>
+
+            <small
+                id="expiredLimit${index}"
+                style="color:#c0392b;display:none;">
+                Max allowed is ${MAX_QUANTITY}
+            </small>
 
         </div>
 
@@ -170,6 +207,7 @@ function changeStock(index, amount) {
     value += amount;
 
     if (value < 0) value = 0;
+    if (value > MAX_QUANTITY) value = MAX_QUANTITY;
 
     input.value = value;
 
@@ -189,6 +227,7 @@ function changeExpired(index, amount) {
     value += amount;
 
     if (value < 0) value = 0;
+    if (value > MAX_QUANTITY) value = MAX_QUANTITY;
 
     input.value = value;
 

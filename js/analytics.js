@@ -2,189 +2,197 @@ const totalSubmissions = document.getElementById("totalSubmissions");
 const activeDealers = document.getElementById("activeDealers");
 const criticalProducts = document.getElementById("criticalProducts");
 const inventoryHealth = document.getElementById("inventoryHealth");
+const totalExpired = document.getElementById("totalExpired");
 
 const criticalList = document.getElementById("criticalList");
+const expiredList = document.getElementById("expiredList");
 const recentList = document.getElementById("recentList");
 const dealerTable = document.getElementById("dealerTable");
+
+// ---------------------------
+// Helpers
+// ---------------------------
+
+function escapeHTML(str) {
+    return String(str ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function getUnit(product) {
+    return product === "Milk" ? "L" : "Packs";
+}
 
 // ==========================
 // Dealer Analytics
 // ==========================
 
 db.collection("dealerStocks")
-.onSnapshot((snapshot)=>{
+    .onSnapshot(
+        snapshot => {
 
-    let dealerCount=0;
-    let totalProducts=0;
-    let healthyProducts=0;
-    let criticalCount=0;
+            let dealerCount = 0;
+            let totalProducts = 0;
+            let healthyProducts = 0;
+            let criticalCount = 0;
+            let expiredItemCount = 0;
+            let expiredUnitTotal = 0;
 
-    dealerTable.innerHTML="";
-    criticalList.innerHTML="";
+            const dealerRows = [];
+            const criticalItems = [];
+            const expiredItems = [];
 
-    snapshot.forEach(doc=>{
+            snapshot.forEach(doc => {
 
-        dealerCount++;
+                dealerCount++;
 
-        const data=doc.data();
+                const data = doc.data();
 
-        let health=100;
+                let health = 100;
+                let productCount = 0;
 
-        let productCount=0;
+                for (const product in data.stock) {
 
-        for(const product in data.stock){
+                    productCount++;
+                    totalProducts++;
 
-            productCount++;
+                    const qty = data.stock[product];
+                    const expired = data.expired?.[product] ?? 0;
 
-            totalProducts++;
+                    let isHealthy = true;
 
-            const qty=data.stock[product];
+                    if (qty <= 10) {
 
-            if(qty<=10){
+                        health -= 20;
+                        criticalCount++;
+                        isHealthy = false;
 
-                health-=20;
+                        criticalItems.push(`
+                            <div class="activity-item">
+                                <strong>${escapeHTML(product)}</strong>
+                                <br>
+                                Dealer : ${escapeHTML(data.dealer)}
+                                <br>
+                                Remaining :
+                                <span style="color:red;font-weight:bold;">${qty}</span>
+                            </div>
+                        `);
 
-                criticalCount++;
+                    } else if (qty <= 20) {
 
-                criticalList.innerHTML+=`
+                        health -= 10;
 
-                <div class="activity-item">
+                    }
 
-                    <strong>${product}</strong>
+                    if (expired > 0) {
 
-                    <br>
+                        health -= 5;
+                        expiredItemCount++;
+                        expiredUnitTotal += expired;
 
-                    Dealer : ${data.dealer}
+                        expiredItems.push(`
+                            <div class="activity-item">
+                                <strong>${escapeHTML(product)}</strong>
+                                <br>
+                                Dealer : ${escapeHTML(data.dealer)}
+                                <br>
+                                Expired :
+                                <span style="color:#c0392b;font-weight:bold;">${expired} ${getUnit(product)}</span>
+                            </div>
+                        `);
 
-                    <br>
+                    }
 
-                    Remaining :
+                    if (isHealthy) {
+                        healthyProducts++;
+                    }
 
-                    <span style="color:red;font-weight:bold;">
+                }
 
-                    ${qty}
+                if (health < 0) health = 0;
 
-                    </span>
+                dealerRows.push(`
+                    <tr>
+                        <td style="padding:12px 0;">${escapeHTML(data.dealer)}</td>
+                        <td align="center">${productCount}</td>
+                        <td align="right">${health}%</td>
+                    </tr>
+                `);
 
-                </div>
+            });
 
-                `;
+            dealerTable.innerHTML = dealerRows.join("");
 
+            criticalList.innerHTML = criticalItems.length
+                ? criticalItems.join("")
+                : "<p>No critical products.</p>";
+
+            if (expiredList) {
+                expiredList.innerHTML = expiredItems.length
+                    ? expiredItems.join("")
+                    : "<p>No expired products.</p>";
             }
 
-            else{
+            activeDealers.textContent = dealerCount;
+            criticalProducts.textContent = criticalCount;
 
-                healthyProducts++;
-
+            if (totalExpired) {
+                totalExpired.textContent = expiredItemCount;
             }
 
+            const overall = Math.round((healthyProducts / totalProducts) * 100) || 0;
+            inventoryHealth.textContent = overall + "%";
+
+        },
+        error => {
+            console.error("Failed to load dealer analytics:", error);
+            dealerTable.innerHTML = "<tr><td colspan='3'>Failed to load data.</td></tr>";
         }
-
-        if(health<0)
-            health=0;
-
-        dealerTable.innerHTML+=`
-
-        <tr>
-
-            <td style="padding:12px 0;">
-
-            ${data.dealer}
-
-            </td>
-
-            <td align="center">
-
-            ${productCount}
-
-            </td>
-
-            <td align="right">
-
-            ${health}%
-
-            </td>
-
-        </tr>
-
-        `;
-
-    });
-
-    activeDealers.textContent=dealerCount;
-
-    criticalProducts.textContent=criticalCount;
-
-    const overall=Math.round((healthyProducts/totalProducts)*100)||0;
-
-    inventoryHealth.textContent=overall+"%";
-
-});
+    );
 
 // ==========================
 // Submission History
 // ==========================
 
 db.collection("stockHistory")
+    .orderBy("updatedAt", "desc")
+    .limit(20)
+    .onSnapshot(
+        snapshot => {
 
-.orderBy("updatedAt","desc")
+            const items = [];
 
-.limit(20)
+            snapshot.forEach(doc => {
 
-.onSnapshot(snapshot=>{
+                const data = doc.data();
 
-    recentList.innerHTML="";
+                const time = data.updatedAt
+                    ? data.updatedAt.toDate().toLocaleString()
+                    : "";
 
-    let submissionCount=0;
+                items.push(`
+                    <div class="activity-item">
+                        <strong>${escapeHTML(data.dealer)}</strong>
+                        <br>
+                        Submitted Inventory
+                        <br>
+                        Window : ${escapeHTML(data.submissionWindow)}
+                        <br>
+                        <small>${time}</small>
+                    </div>
+                `);
 
-    snapshot.forEach(doc=>{
+            });
 
-        submissionCount++;
+            recentList.innerHTML = items.join("");
+            totalSubmissions.textContent = items.length;
 
-        const data=doc.data();
-
-        let time="";
-
-        if(data.updatedAt){
-
-            time=data.updatedAt.toDate().toLocaleString();
-
+        },
+        error => {
+            console.error("Failed to load submission history:", error);
+            recentList.innerHTML = "<p>Failed to load recent submissions.</p>";
         }
-
-        recentList.innerHTML+=`
-
-        <div class="activity-item">
-
-            <strong>
-
-            ${data.dealer}
-
-            </strong>
-
-            <br>
-
-            Submitted Inventory
-
-            <br>
-
-            Window :
-
-            ${data.submissionWindow}
-
-            <br>
-
-            <small>
-
-            ${time}
-
-            </small>
-
-        </div>
-
-        `;
-
-    });
-
-    totalSubmissions.textContent=submissionCount;
-
-});
+    );

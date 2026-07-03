@@ -16,6 +16,31 @@ const container = document.getElementById("products");
 let expiredProducts = {};
 
 // ===============================
+// Integer-Only Input Sanitizer
+// ===============================
+// Strips anything that isn't a digit as the dealer types/pastes,
+// so values like "0.5" or "-3" can never be entered in the first place.
+function sanitizeInteger(input) {
+
+    const cleaned = input.value.replace(/[^0-9]/g, "");
+
+    input.value = cleaned;
+
+}
+
+// Converts a field's value to a safe non-negative integer.
+// Used as the final safety net before saving to Firestore.
+function toSafeInt(value) {
+
+    let num = parseInt(value, 10);
+
+    if (isNaN(num) || num < 0) num = 0;
+
+    return num;
+
+}
+
+// ===============================
 // Authentication Check
 // ===============================
 auth.onAuthStateChanged(async (user) => {
@@ -93,6 +118,9 @@ async function loadProducts() {
                     type="number"
                     min="0"
                     step="1"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                    oninput="sanitizeInteger(this)"
                     value="${stockValue}">
 
                 <button onclick="changeStock(${index},1)">+</button>
@@ -112,6 +140,9 @@ async function loadProducts() {
                     type="number"
                     min="0"
                     step="1"
+                    inputmode="numeric"
+                    pattern="[0-9]*"
+                    oninput="sanitizeInteger(this)"
                     value="${expiredValue}">
 
                 <button onclick="changeExpired(${index},1)">+</button>
@@ -198,11 +229,11 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
 
     products.forEach((product, index) => {
 
-        stockData[product.name] = Number(
+        stockData[product.name] = toSafeInt(
             document.getElementById(`stock${index}`).value
         );
 
-        expiredData[product.name] = Number(
+        expiredData[product.name] = toSafeInt(
             document.getElementById(`expired${index}`).value
         );
 
@@ -347,9 +378,9 @@ function getTotalStock() {
 
     products.forEach((product, index) => {
 
-        total += Number(
+        total += toSafeInt(
             document.getElementById(`stock${index}`).value
-        ) || 0;
+        );
 
     });
 
@@ -363,9 +394,9 @@ function getTotalExpired() {
 
     products.forEach((product, index) => {
 
-        total += Number(
+        total += toSafeInt(
             document.getElementById(`expired${index}`).value
-        ) || 0;
+        );
 
     });
 
@@ -409,6 +440,7 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
 // ===============================
 window.changeStock = changeStock;
 window.changeExpired = changeExpired;
+window.sanitizeInteger = sanitizeInteger;
 
 // ===============================
 // End of dealer.js

@@ -2,53 +2,59 @@
 // Dealer Mapping
 // ===============================
 const dealerNames = {
-    "freshmart@gmail.com": "Fresh Mart, Kochi",
-    "metro@gmail.com": "Metro Supermarket",
-    "citysuper@gmail.com": "City Super Store"
+    "genson@gmail.com": "Genson Mart, Kochi",
+    "aiswarya@gmail.com": "Aiswarya Supermarket",
+    "sree@gmail.com": "Sree Super Store"
 };
+
+// ===============================
+// Global Elements
+// ===============================
+const container = document.getElementById("products");
+
+// Track expired products
+let expiredProducts = {};
 
 // ===============================
 // Authentication Check
 // ===============================
-auth.onAuthStateChanged((user) => {
+auth.onAuthStateChanged(async (user) => {
 
     if (!user) {
         window.location.href = "index.html";
         return;
     }
 
-   document.getElementById("dealerName").textContent =
-dealerNames[user.email] || user.email;
+    document.getElementById("dealerName").textContent =
+        dealerNames[user.email] || user.email;
 
-loadProducts();
+    await loadProducts();
 
 });
 
 // ===============================
-// Product Cards
+// Load Products
 // ===============================
-// ===============================
-// Load Products from Firestore
-// ===============================
-const container = document.getElementById("products");
-
 async function loadProducts() {
 
     container.innerHTML = "";
 
     let savedStock = {};
+    expiredProducts = {};
 
     const user = auth.currentUser;
 
     if (user) {
 
-        const doc = await db.collection("dealerStocks")
+        const doc = await db
+            .collection("dealerStocks")
             .doc(user.email)
             .get();
 
         if (doc.exists) {
 
             savedStock = doc.data().stock || {};
+            expiredProducts = doc.data().expired || {};
 
         }
 
@@ -56,10 +62,15 @@ async function loadProducts() {
 
     products.forEach((product, index) => {
 
-        const value =
+        const stockValue =
             savedStock[product.name] !== undefined
-            ? savedStock[product.name]
-            : product.stock;
+                ? savedStock[product.name]
+                : product.stock;
+
+        const expiredValue =
+            expiredProducts[product.name] !== undefined
+                ? expiredProducts[product.name]
+                : 0;
 
         container.innerHTML += `
 
@@ -71,17 +82,39 @@ async function loadProducts() {
 
             <p>${product.unit}</p>
 
+            <label><strong>Available Stock</strong></label>
+
             <div class="counter">
 
-                <button onclick="change(${index},-1)">−</button>
+                <button onclick="changeStock(${index},-1)">−</button>
 
                 <input
                     id="stock${index}"
                     type="number"
-                    value="${value}"
-                    min="0">
+                    min="0"
+                    step="1"
+                    value="${stockValue}">
 
-                <button onclick="change(${index},1)">+</button>
+                <button onclick="changeStock(${index},1)">+</button>
+
+            </div>
+
+            <br>
+
+            <label><strong>Expired Products</strong></label>
+
+            <div class="counter">
+
+                <button onclick="changeExpired(${index},-1)">−</button>
+
+                <input
+                    id="expired${index}"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value="${expiredValue}">
+
+                <button onclick="changeExpired(${index},1)">+</button>
 
             </div>
 
@@ -92,15 +125,16 @@ async function loadProducts() {
     });
 
 }
-
 // ===============================
-// Increase / Decrease Stock
+// Change Available Stock
 // ===============================
-function change(index, amount) {
+function changeStock(index, amount) {
 
     const input = document.getElementById(`stock${index}`);
 
-    let value = parseInt(input.value) || 0;
+    let value = parseInt(input.value);
+
+    if (isNaN(value)) value = 0;
 
     value += amount;
 
@@ -111,28 +145,65 @@ function change(index, amount) {
 }
 
 // ===============================
-// Countdown Timer
+// Change Expired Products
 // ===============================
+function changeExpired(index, amount) {
 
+    const input = document.getElementById(`expired${index}`);
 
+    let value = parseInt(input.value);
+
+    if (isNaN(value)) value = 0;
+
+    value += amount;
+
+    if (value < 0) value = 0;
+
+    input.value = value;
+
+}
 
 // ===============================
-// Submit Stock
+// Get Current Submission Window
 // ===============================
-// ===============================
-// Submit Stock
-// ===============================
+function getSubmissionWindow() {
+
+    const now = new Date();
+
+    const hour = now.getHours();
+
+    if (hour < 6) {
+        return "12 AM";
+    }
+
+    if (hour < 12) {
+        return "6 AM";
+    }
+
+    if (hour < 18) {
+        return "12 PM";
+    }
+
+    return "6 PM";
+
+}
+
 // ===============================
 // Submit Stock
 // ===============================
 document.getElementById("submitBtn").addEventListener("click", async () => {
 
     const stockData = {};
+    const expiredData = {};
 
     products.forEach((product, index) => {
 
         stockData[product.name] = Number(
             document.getElementById(`stock${index}`).value
+        );
+
+        expiredData[product.name] = Number(
+            document.getElementById(`expired${index}`).value
         );
 
     });
@@ -142,19 +213,6 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
     const dealerName =
         dealerNames[dealerEmail] || dealerEmail;
 
-    const now = new Date();
-
-    let currentWindow = "";
-
-    if (now.getHours() < 6)
-        currentWindow = "12 AM";
-    else if (now.getHours() < 12)
-        currentWindow = "6 AM";
-    else if (now.getHours() < 18)
-        currentWindow = "12 PM";
-    else
-        currentWindow = "6 PM";
-
     const latestData = {
 
         dealer: dealerName,
@@ -163,21 +221,23 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
 
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
 
-        submissionWindow: currentWindow,
+        submissionWindow: getSubmissionWindow(),
 
-        stock: stockData
+        stock: stockData,
+
+        expired: expiredData
 
     };
 
-    try {
-
-        // Update latest stock
-        await db.collection("dealerStocks")
+    try {        // Save latest stock
+        await db
+            .collection("dealerStocks")
             .doc(dealerEmail)
             .set(latestData);
 
         // Save history
-        await db.collection("stockHistory")
+        await db
+            .collection("stockHistory")
             .add({
 
                 ...latestData,
@@ -188,17 +248,141 @@ document.getElementById("submitBtn").addEventListener("click", async () => {
 
         alert("✅ Stock Submitted Successfully!");
 
-    }
-
-    catch (error) {
+    } catch (error) {
 
         console.error(error);
 
-        alert("Error saving stock.");
+        alert("❌ Error saving stock.");
 
     }
 
 });
+
+// ===============================
+// Current Time & Countdown Timer
+// ===============================
+function updateTimer() {
+
+    const now = new Date();
+
+    const currentTimeElement = document.getElementById("currentTime");
+    const nextSubmissionElement = document.getElementById("nextSubmission");
+    const timerElement = document.getElementById("timer");
+    const statusElement = document.getElementById("statusText");
+
+    currentTimeElement.textContent =
+        now.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit"
+        });
+
+    let next = new Date(now);
+
+    const hour = now.getHours();
+
+    if (hour < 6) {
+
+        next.setHours(6, 0, 0, 0);
+
+    } else if (hour < 12) {
+
+        next.setHours(12, 0, 0, 0);
+
+    } else if (hour < 18) {
+
+        next.setHours(18, 0, 0, 0);
+
+    } else {
+
+        next.setDate(next.getDate() + 1);
+        next.setHours(0, 0, 0, 0);
+
+    }
+
+    nextSubmissionElement.textContent =
+        next.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+
+    const diff = next - now;
+
+    const hours = Math.floor(diff / 3600000);
+    const minutes = Math.floor((diff % 3600000) / 60000);
+    const seconds = Math.floor((diff % 60000) / 1000);
+
+    timerElement.textContent =
+        `${String(hours).padStart(2, "0")}:` +
+        `${String(minutes).padStart(2, "0")}:` +
+        `${String(seconds).padStart(2, "0")}`;
+            if (diff <= 3600000) {
+
+        statusElement.textContent = "🔴 Submit Soon";
+
+    } else {
+
+        statusElement.textContent = "🟢 Waiting";
+
+    }
+
+}
+
+setInterval(updateTimer, 1000);
+updateTimer();
+
+// ===============================
+// Auto Refresh After Submission
+// ===============================
+window.addEventListener("focus", () => {
+    updateTimer();
+});
+
+// ===============================
+// Helper Functions
+// ===============================
+function getTotalStock() {
+
+    let total = 0;
+
+    products.forEach((product, index) => {
+
+        total += Number(
+            document.getElementById(`stock${index}`).value
+        ) || 0;
+
+    });
+
+    return total;
+
+}
+
+function getTotalExpired() {
+
+    let total = 0;
+
+    products.forEach((product, index) => {
+
+        total += Number(
+            document.getElementById(`expired${index}`).value
+        ) || 0;
+
+    });
+
+    return total;
+
+}
+
+// Optional console summary for debugging
+function printSummary() {
+
+    console.log("========== Dealer Summary ==========");
+    console.log("Dealer :", dealerNames[auth.currentUser.email]);
+    console.log("Total Stock :", getTotalStock());
+    console.log("Total Expired :", getTotalExpired());
+    console.log("====================================");
+
+}
 // ===============================
 // Logout
 // ===============================
@@ -209,6 +393,23 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
 
             window.location.href = "index.html";
 
+        })
+        .catch((error) => {
+
+            console.error("Logout Error:", error);
+            alert("Unable to logout. Please try again.");
+
         });
 
 });
+
+// ===============================
+// Make Functions Available Globally
+// (Required because the HTML uses onclick="...")
+// ===============================
+window.changeStock = changeStock;
+window.changeExpired = changeExpired;
+
+// ===============================
+// End of dealer.js
+// ===============================

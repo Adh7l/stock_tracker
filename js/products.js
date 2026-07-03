@@ -2,37 +2,37 @@ const products = [
 {
     name:"Milk",
     image:"assets/milk.png",
-    stock:48,
+    stock:50,
     unit:"Liters"
 },
 {
     name:"Curd",
     image:"assets/curd.png",
-    stock:26,
+    stock:50,
     unit:"Packets"
 },
 {
     name:"Butter",
     image:"assets/butter.png",
-    stock:14,
+    stock:50,
     unit:"Packs"
 },
 {
     name:"Paneer",
     image:"assets/paneer.png",
-    stock:17,
+    stock:50,
     unit:"Packs"
 },
 {
     name:"Ghee",
     image:"assets/ghee.png",
-    stock:9,
+    stock:50,
     unit:"Packs"
 },
 {
     name:"Cheese",
     image:"assets/cheese.png",
-    stock:12,
+    stock:50,
     unit:"Packs"
 }
 ];

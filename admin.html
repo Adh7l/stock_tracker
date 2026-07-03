@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Daily Dairy Admin Dashboard</title>
+
+<link rel="stylesheet" href="css/style.css">
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="container">
+
+<header>
+
+<div class="logo">
+
+<img src="assets/logo.png" width="70">
+
+<div>
+
+<h2>Daily Dairy</h2>
+
+<p>Inventory Management System</p>
+
+</div>
+
+</div>
+
+<div class="dealer">
+
+<h2>Administrator</h2>
+
+<p>Real-Time Inventory Monitoring</p>
+
+</div>
+
+</header>
+
+<h1 class="dashboard-title">
+
+📊 Inventory Dashboard
+
+</h1>
+
+<!-- Summary Cards -->
+
+<div class="summary">
+
+<div class="summary-card blue">
+
+<h2 id="dealerCount">0</h2>
+
+<p>Total Dealers</p>
+
+</div>
+
+<div class="summary-card green">
+
+<h2 id="updatedCount">0</h2>
+
+<p>Updated</p>
+
+</div>
+
+<div class="summary-card orange">
+
+<h2 id="missedCount">0</h2>
+
+<p>Missed</p>
+
+</div>
+
+<div class="summary-card red">
+
+<h2 id="lowStockCount">0</h2>
+
+<p>Low Stock</p>
+
+</div>
+
+</div>
+
+<!-- Main Grid -->
+
+<div class="dashboard-grid">
+
+<!-- LEFT -->
+
+<div>
+
+<div class="section">
+
+<h2>
+
+🚨 Critical Products
+
+</h2>
+
+<div id="criticalProducts">
+
+Loading...
+
+</div>
+
+</div>
+
+<div class="section">
+
+<h2>
+
+📋 Recent Activity
+
+</h2>
+
+<div id="recentActivity">
+
+Loading...
+
+</div>
+
+</div>
+
+</div>
+
+<!-- RIGHT -->
+
+<div>
+
+<div class="section">
+
+<h2>
+
+🏪 Dealer Inventory
+
+</h2>
+
+<div id="dealerData">
+
+Loading...
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
+<script src="js/firebase.js"></script>
+
+<script src="js/admin.js"></script>
+
+</body>
+
+</html>

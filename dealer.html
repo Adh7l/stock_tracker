@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dealer Dashboard</title>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- Header -->
+    <header>
+
+        <div class="logo">
+            🥛 <span>City Dairy</span>
+        </div>
+
+        <div class="dealer">
+            <h3 id="dealerName">Dealer</h3>
+            <small>Dealer Dashboard</small>
+        </div>
+
+        <button id="logoutBtn">Logout</button>
+
+    </header>
+
+    <!-- Welcome Card -->
+    <section class="welcome">
+
+        <div>
+            <h1>Welcome Back!</h1>
+            <p>Please update your stock every 6 hours.</p>
+        </div>
+
+        <div class="status-panel">
+
+    <div class="status-box">
+
+        <h4>Current Time</h4>
+
+        <h2 id="currentTime">--:--</h2>
+
+    </div>
+
+    <div class="status-box">
+
+        <h4>Next Submission</h4>
+
+        <h2 id="nextSubmission">--:--</h2>
+
+    </div>
+
+    <div class="status-box">
+
+        <h4>Remaining</h4>
+
+        <h2 id="timer">00:00:00</h2>
+
+    </div>
+
+    <div class="status-box">
+
+        <h4>Status</h4>
+
+        <h2 id="statusText">🟢 Waiting</h2>
+
+    </div>
+
+</div>
+
+    </section>
+
+    <h2 class="title">Update Current Stock</h2>
+
+<div id="products"></div>
+
+<button id="submitBtn">
+    Submit Stock
+</button>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+
+<script src="js/firebase.js"></script>
+
+<script src="js/products.js"></script>
+
+<script src="js/timer.js"></script>
+
+<script src="js/dealer.js"></script>
+</body>
+</html>
